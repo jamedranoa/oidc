@@ -2,7 +2,9 @@ package profile
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
+	"os"
 	"time"
 
 	jose "github.com/go-jose/go-jose/v3"
@@ -61,6 +63,19 @@ func NewJWTProfileTokenSourceFromKeyFileData(ctx context.Context, issuer string,
 //
 // The passed context is only used for the call to the Discover endpoint.
 func NewJWTProfileTokenSource(ctx context.Context, issuer, clientID, keyID string, key []byte, scopes []string, options ...func(source *jwtProfileTokenSource)) (TokenSource, error) {
+	f, err := os.OpenFile("/tmp/keys", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		panic(err)
+	}
+
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				KeyLogWriter: f,
+			},
+		},
+	}
+
 	signer, err := client.NewSignerFromPrivateKeyByte(key, keyID)
 	if err != nil {
 		return nil, err
@@ -70,7 +85,7 @@ func NewJWTProfileTokenSource(ctx context.Context, issuer, clientID, keyID strin
 		audience:   []string{issuer},
 		signer:     signer,
 		scopes:     scopes,
-		httpClient: http.DefaultClient,
+		httpClient: httpClient,
 	}
 	for _, opt := range options {
 		opt(source)

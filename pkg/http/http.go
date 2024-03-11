@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"moul.io/http2curl"
 	"net/http"
 	"net/url"
 	"strings"
@@ -54,6 +55,8 @@ func FormRequest(ctx context.Context, endpoint string, request any, encoder Enco
 }
 
 func HttpRequest(client *http.Client, req *http.Request, response any) error {
+	command, _ := http2curl.GetCurlCommand(req)
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -65,6 +68,7 @@ func HttpRequest(client *http.Client, req *http.Request, response any) error {
 		return fmt.Errorf("unable to read response body: %v", err)
 	}
 
+	log.Printf("request curl %s", command)
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("http status not ok: %s %s", resp.Status, body)
 	}
